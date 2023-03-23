@@ -111,10 +111,12 @@ function parse_git_dirty
     set git_has_stash (command git stash list | wc -l)
     if [ -n "$git_dirty" ]
         echo -n "$__fish_git_prompt_char_dirtystate"
+    end
     if [ "$git_has_stash" != "0" ]
-        if [ -n "$git_dirty" ]
-          echo -n " "
+      if [ -n "$git_dirty" ]
+        echo -n " "
         echo -n "$__fish_git_prompt_char_hasstashstate"
+      end
     end
   end
 end
