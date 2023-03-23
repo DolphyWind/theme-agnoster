@@ -19,7 +19,10 @@
 set -g current_bg NONE
 set -g segment_separator \uE0B0
 set -g right_segment_separator \uE0B0
+set -g theme_display_user yes
+set -g theme_hide_hostname no
 set -q scm_prompt_blacklist; or set -g scm_prompt_blacklist
+set -g fish_git_prompt_untracked_files normal
 
 # ===========================
 # Color setting
@@ -31,8 +34,10 @@ set -q scm_prompt_blacklist; or set -g scm_prompt_blacklist
 
 set -q color_virtual_env_bg; or set -g color_virtual_env_bg white
 set -q color_virtual_env_str; or set -g color_virtual_env_str black
-set -q color_user_bg; or set -g color_user_bg black
-set -q color_user_str; or set -g color_user_str yellow
+set -q color_user_bg; or set -g color_user_bg green
+set -q color_user_str; or set -g color_user_str black
+set -q color_root_bg; or set -g color_root_bg red
+set -q color_root_str; or set -g color_root_str white
 set -q color_dir_bg; or set -g color_dir_bg blue
 set -q color_dir_str; or set -g color_dir_str black
 set -q color_hg_changed_bg; or set -g color_hg_changed_bg yellow
@@ -75,7 +80,8 @@ set -q theme_svn_prompt_enabled; or set -g theme_svn_prompt_enabled no
 # ===========================
 
 set -g __fish_git_prompt_showdirtystate 'yes'
-set -g __fish_git_prompt_char_dirtystate '±'
+set -g __fish_git_prompt_char_dirtystate '●'
+set -g __fish_git_prompt_char_hasstashstate '⚑'
 set -g __fish_git_prompt_char_cleanstate ''
 
 function shorten_branch_name -a branch_name
@@ -102,10 +108,13 @@ function parse_git_dirty
     set submodule_syntax "--ignore-submodules=dirty"
     set untracked_syntax "--untracked-files=$fish_git_prompt_untracked_files"
     set git_dirty (command git status --porcelain $submodule_syntax $untracked_syntax 2> /dev/null)
+    set git_has_stash (command git stash list | wc -l)
     if [ -n "$git_dirty" ]
         echo -n "$__fish_git_prompt_char_dirtystate"
-    else
-        echo -n "$__fish_git_prompt_char_cleanstate"
+    if [ "$git_has_stash" != "0" ]
+        if [ -n "$git_dirty" ]
+          echo -n " "
+        echo -n "$__fish_git_prompt_char_hasstashstate"
     end
   end
 end
@@ -196,7 +205,11 @@ function prompt_user -d "Display current user if different from $default_user"
       else
         set USER_PROMPT $USER
       end
-      prompt_segment $color_user_bg $color_user_str $USER_PROMPT
+      if fish_is_root_user
+        prompt_segment $color_root_bg $color_root_str $USER_PROMPT
+      else
+        prompt_segment $color_user_bg $color_user_str $USER_PROMPT
+      end
     end
   else
     get_hostname
@@ -264,7 +277,7 @@ function prompt_git -d "Display the current git state"
     if [ "$dirty" != "" ]
       prompt_segment $color_git_dirty_bg $color_git_dirty_str "$branch_symbol $branch $dirty"
     else
-      prompt_segment $color_git_bg $color_git_str "$branch_symbol $branch $dirty"
+      prompt_segment $color_git_bg $color_git_str "$branch_symbol $branch"
     end
   end
 end
@@ -306,12 +319,6 @@ function prompt_status -d "the symbols for a non zero exit status, root and back
 
     if [ "$fish_private_mode" ]
       prompt_segment $color_status_private_bg $color_status_private_str "🔒"
-    end
-
-    # if superuser (uid == 0)
-    set -l uid (id -u $USER)
-    if [ $uid -eq 0 ]
-      prompt_segment $color_status_superuser_bg $color_status_superuser_str "⚡"
     end
 
     # Jobs display
