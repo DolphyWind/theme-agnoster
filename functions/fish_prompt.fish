@@ -80,6 +80,7 @@ set -q theme_svn_prompt_enabled; or set -g theme_svn_prompt_enabled no
 # ===========================
 
 set -g __fish_git_prompt_showdirtystate 'yes'
+set -g __fish_git_prompt_showhashstate 'yes'
 set -g __fish_git_prompt_char_dirtystate '●'
 set -g __fish_git_prompt_char_hasstashstate '⚑'
 set -g __fish_git_prompt_char_cleanstate ''
@@ -108,15 +109,17 @@ function parse_git_dirty
     set submodule_syntax "--ignore-submodules=dirty"
     set untracked_syntax "--untracked-files=$fish_git_prompt_untracked_files"
     set git_dirty (command git status --porcelain $submodule_syntax $untracked_syntax 2> /dev/null)
-    set git_has_stash (command git stash list | wc -l)
     if [ -n "$git_dirty" ]
         echo -n "$__fish_git_prompt_char_dirtystate"
     end
+  end
+end
+
+function parse_git_stash
+  set git_has_stash (command git stash list | wc -l)
+  if [ $__fish_git_prompt_showhashstate = "yes" ]
     if [ "$git_has_stash" != "0" ]
-      if [ -n "$git_dirty" ]
-        echo -n " "
-        echo -n "$__fish_git_prompt_char_hasstashstate"
-      end
+      echo -n "$__fish_git_prompt_char_hasstashstate"
     end
   end
 end
@@ -266,8 +269,10 @@ end
 function prompt_git -d "Display the current git state"
   set -l ref
   set -l dirty
+  set -l hasstash
   if command git rev-parse --is-inside-work-tree >/dev/null 2>&1
     set dirty (parse_git_dirty)
+    set hasstash (parse_git_stash)
     set ref (command git symbolic-ref HEAD 2> /dev/null)
     if [ $status -gt 0 ]
       set -l branch (command git show-ref --head -s --abbrev |head -n1 2> /dev/null)
@@ -277,9 +282,9 @@ function prompt_git -d "Display the current git state"
     set -l long_branch (echo $ref | sed "s#refs/heads/##")
     set -l branch (shorten_branch_name $long_branch)
     if [ "$dirty" != "" ]
-      prompt_segment $color_git_dirty_bg $color_git_dirty_str "$branch_symbol $branch $dirty"
+      prompt_segment $color_git_dirty_bg $color_git_dirty_str "$branch_symbol $branch $dirty $hasstash"
     else
-      prompt_segment $color_git_bg $color_git_str "$branch_symbol $branch"
+      prompt_segment $color_git_bg $color_git_str "$branch_symbol $branch $hasstash"
     end
   end
 end
