@@ -281,10 +281,22 @@ function prompt_git -d "Display the current git state"
     set branch_symbol \uE0A0
     set -l long_branch (echo $ref | sed "s#refs/heads/##")
     set -l branch (shorten_branch_name $long_branch)
+    set -l git_last_prompt
+    set git_last_prompt "$branch_symbol $branch"
+    set -l git_prompt $color_git_bg $color_git_str "$branch_symbol $branch $hasstash"
+    
     if [ "$dirty" != "" ]
-      prompt_segment $color_git_dirty_bg $color_git_dirty_str "$branch_symbol $branch $dirty $hasstash"
+      set git_last_prompt "$git_last_prompt $dirty"
+    end
+
+    if [ "$hasstash" != "" ]
+      set git_last_prompt "$git_last_prompt $hasstash"
+    end
+
+    if [ "$dirty" != "" ]
+      prompt_segment $color_git_dirty_bg $color_git_dirty_str "$git_last_prompt"
     else
-      prompt_segment $color_git_bg $color_git_str "$branch_symbol $branch $hasstash"
+      prompt_segment $color_git_bg $color_git_str "$git_last_prompt"
     end
   end
 end
